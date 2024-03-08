@@ -1,0 +1,29 @@
+{
+  "name": "omega-bible-testing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@omegajs/gateway": "^1.0.1",
+    "axios": "^1.6.7",
+    "b4a": "git+https://lab.cheetah.agency/omega/b4a.git",
+    "bit-crypto": "git+https://lab.cheetah.agency/omega/bit-crypto.git",
+    "bitDHT": "git+https://lab.cheetah.agency/omega/bitdht.git",
+    "bitswarm": "git+https://lab.cheetah.agency/omega/bitswarm.git",
+    "chainstore": "git+https://lab.cheetah.agency/omega/chainstore.git",
+    "dDatabase": "git+https://lab.cheetah.agency/omega/ddatabase.git",
+    "dDrive": "git+https://lab.cheetah.agency/omega/ddrive.git",
+    "debounceify": "^1.1.0",
+    "express": "^4.18.2",
+    "graceful-goodbye": "^1.3.0",
+    "localddrive": "git+https://lab.cheetah.agency/omega/localddrive.git",
+    "mirror-ddrive": "git+https://lab.cheetah.agency/omega/mirror-ddrive.git",
+    "unichain": "git+https://lab.cheetah.agency/omega/unichain.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
