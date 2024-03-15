@@ -7,7 +7,12 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@omegajs/database": "^1.0.0",
+    "@omegajs/drive": "^1.0.0",
+    "@omegajs/flock": "^1.0.0",
     "@omegajs/gateway": "^1.0.1",
+    "@omegajs/keeper": "^1.0.0",
+    "@omegajs/scroll": "^1.0.0",
     "axios": "^1.6.7",
     "b4a": "git+https://lab.cheetah.agency/omega/b4a.git",
     "bit-crypto": "git+https://lab.cheetah.agency/omega/bit-crypto.git",

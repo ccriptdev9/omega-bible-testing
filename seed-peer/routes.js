@@ -1,10 +1,284 @@
 const router = require("express").Router();
 const axios = require("axios");
+const fs = require("fs");
 const { getDataFromSeedPeer, saveData } = require("./db");
+const { storeInDrive, getFileFromDrive } = require("./drive");
 
-const API_KEY = "6a1f10d52350bc35add376b42a4446c9";
+const API_KEY = "d6c09d4945b3c5f15772ba0abf08fbd1";
+
+router.post("/audio-bibles", async (req, res) => {
+  console.log("audio bibles");
+
+  const response = await axios.default.get(
+    "https://api.scripture.api.bible/v1/audio-bibles",
+    {
+      headers: {
+        "api-key": API_KEY,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const data = response?.data?.data;
+  console.log("Retrieved all audio bibles from API - length", data?.length);
+
+  if (data?.length > 0) {
+    // First store all bibles against a single key
+    let KEY = "audio-bibles";
+    await saveData(KEY, data);
+
+    await Promise.all(
+      data.map(async (bible) => {
+        // Construct a key for each bible
+        KEY = `audio-bibles/${bible.id}`;
+
+        // Store this specific bible against constructed key
+        await saveData(KEY, bible);
+      })
+    );
+  }
+
+  res.status(200).json({ data: response?.data?.data });
+});
+
+router.get("/audio-bibles/all", async (req, res) => {
+  const data = await getDataFromSeedPeer("audio-bibles");
+  res.status(200).json({ data });
+});
+
+router.get("/audio-bibles/:id", async (req, res) => {
+  const data = await getDataFromSeedPeer(`audio-bibles/${req.params.id}`);
+  res.status(200).json({ data });
+});
+
+router.post("/audio-bibles/books", async (req, res) => {
+  const audioBibles = await getDataFromSeedPeer("audio-bibles");
+
+  if (audioBibles?.length > 0) {
+    await Promise.all(
+      audioBibles.map(async (audioBible) => {
+        let KEY = `audio-bibles/${audioBible.id}`;
+
+        try {
+          const response = await axios.default.get(
+            `https://api.scripture.api.bible/v1/audio-bibles/${audioBible.id}/books`,
+            {
+              headers: {
+                "api-key": API_KEY,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          console.log("Retrieved books of audio-bible from the API...");
+
+          KEY = `${KEY}/books`;
+          const books = response?.data?.data;
+          await saveData(KEY, books);
+        } catch (error) {
+          console.log("Error retrieving books of audio-bible from the API...");
+        }
+      })
+    );
+  }
+
+  res.status(200).json({ data: "Audio-bible-books stored..." });
+});
+
+router.get("/audio-bibles/:id/books", async (req, res) => {
+  const data = await getDataFromSeedPeer(`audio-bibles/${req.params.id}/books`);
+  res.status(200).json({ data });
+});
+
+router.post("/audio-bibles/chapters", async (req, res) => {
+  console.log("audio bibles");
+
+  const audioBibles = await getDataFromSeedPeer("audio-bibles");
+
+  if (audioBibles?.length > 0) {
+    await Promise.all(
+      audioBibles.map(async (audioBible) => {
+        let KEY = `audio-bibles/${audioBible.id}/books`;
+
+        const books = await getDataFromSeedPeer(KEY);
+
+        if (books?.length > 0) {
+          await Promise.all(
+            books.map(async (book) => {
+              console.log("Making request now...", audioBible.id, book.id);
+
+              try {
+                const response = await axios.default.get(
+                  `https://api.scripture.api.bible/v1/audio-bibles/${audioBible.id}/books/${book.id}/chapters`,
+                  {
+                    headers: {
+                      "api-key": API_KEY,
+                      "Content-Type": "application/json",
+                    },
+                  }
+                );
+
+                console.log(
+                  "Retrieved chapters of audio-bible-book from the API..."
+                );
+
+                KEY = `${KEY}/${book.id}/chapters`;
+                const chapters = response?.data?.data;
+                await saveData(KEY, chapters);
+              } catch (error) {
+                console.log(
+                  "Error retrieving chapters of audio-bible-book from the API..."
+                );
+              }
+            })
+          );
+        }
+      })
+    );
+  }
+
+  res.status(200).json({ data: "All chapters stored..." });
+});
+
+router.get("/audio-bibles/:id/books/:bookId", async (req, res) => {
+  console.log("audio bibles");
+
+  const response = await axios.default.get(
+    `https://api.scripture.api.bible/v1/audio-bibles/${req.params.id}/books/${req.params.bookId}`,
+    {
+      headers: {
+        "api-key": API_KEY,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  console.log("response", response);
+
+  res.status(200).json({ data: response.data });
+});
+
+router.post("/audio-bibles/individual-chapters", async (req, res) => {
+  const audioBibles = await getDataFromSeedPeer("audio-bibles");
+
+  if (audioBibles?.length > 0) {
+    await Promise.all(
+      audioBibles.map(async (audioBible) => {
+        let KEY = `audio-bibles/${audioBible.id}/books`;
+
+        const books = await getDataFromSeedPeer(KEY);
+
+        if (books?.length > 0) {
+          await Promise.all(
+            books.map(async (book) => {
+              KEY = `${KEY}/${book.id}/chapters`;
+
+              const chapters = await getDataFromSeedPeer(KEY);
+
+              if (chapters?.length > 0) {
+                await Promise.all(
+                  chapters.map(async (chapter) => {
+                    try {
+                      const response = await axios.default.get(
+                        `https://api.scripture.api.bible/v1/audio-bibles/${audioBible.id}/chapters/${chapter.id}`,
+                        {
+                          headers: {
+                            "api-key": API_KEY,
+                            "Content-Type": "application/json",
+                          },
+                        }
+                      );
+
+                      console.log(
+                        "Retrieved individual-chapter of audio-bible-book from the API..."
+                      );
+
+                      KEY = `audio-bibles/${audioBible.id}/chapters/${chapter.id}`;
+                      const chapters = response?.data?.data;
+                      await saveData(KEY, chapters);
+                    } catch (error) {
+                      console.log(
+                        "Error retrieving individual-chapter of audio-bible-book from the API..."
+                      );
+                    }
+                  })
+                );
+              }
+            })
+          );
+        }
+      })
+    );
+  }
+
+  res.status(200).json({ data: "All chapters stored..." });
+});
+
+router.get("/audio-bibles/:id/books/:bookId/chapters", async (req, res) => {
+  const data = await getDataFromSeedPeer(
+    `audio-bibles/${req.params.id}/books/${req.params.bookId}/chapters`
+  );
+
+  res.status(200).json({ data });
+});
+
+router.get("/audio-bibles/:id/chapters/:chapterId", async (req, res) => {
+  const data = await getDataFromSeedPeer(
+    `audio-bibles/${req.params.id}/chapters/${req.params.chapterId}`
+  );
+
+  res.status(200).json({ data });
+});
+
+router.post(
+  "/audio-bibles/:id/chapters/:chapterId/store-file",
+  async (req, res) => {
+    console.log("storing file...");
+
+    try {
+      let response = await axios.default.get(
+        `https://api.scripture.api.bible/v1/audio-bibles/${req.params.id}/chapters/${req.params.chapterId}`,
+        {
+          headers: {
+            "api-key": API_KEY,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const chapter = response?.data?.data;
+
+      if (chapter?.resourceUrl) {
+        response = await axios.default.get(chapter.resourceUrl, {
+          responseType: "arraybuffer",
+        });
+
+        const path = `audio-bible-${req.params.id}-chapter-${req.params.chapterId}.mp3`;
+        await storeInDrive(path, response.data);
+
+        res.status(200).json({ data: "File downloaded successfully." });
+      }
+    } catch (error) {
+      console.log(`Error downloading file - `, error?.message);
+      res.status(500).json({ data: "Error downloading file.." });
+    }
+  }
+);
+
+router.get(
+  "/audio-bibles/:id/chapters/:chapterId/get-file",
+  async (req, res) => {
+    await getFileFromDrive(
+      `audio-bible-${req.params.id}-chapter-${req.params.chapterId}.mp3`
+    );
+
+    res.status(200).json({ data: "File retrieved..." });
+  }
+);
 
 router.post("/", async (req, res) => {
+  console.log("retrieving all bibles.");
+
   const response = await axios.default.get(
     "https://api.scripture.api.bible/v1/bibles",
     {
@@ -21,7 +295,7 @@ router.post("/", async (req, res) => {
   if (data?.length > 0) {
     // First store all bibles against a single key
     let KEY = "bibles";
-    await saveData(KEY, data);
+    await saveData(KEY, data, "sub1");
 
     await Promise.all(
       data.map(async (bible) => {
@@ -29,7 +303,7 @@ router.post("/", async (req, res) => {
         KEY = `bibles/${bible.id}`;
 
         // Store this specific bible against constructed key
-        await saveData(KEY, bible);
+        await saveData(KEY, bible, "sub2");
       })
     );
   }
@@ -38,7 +312,9 @@ router.post("/", async (req, res) => {
 });
 
 router.post("/books", async (req, res) => {
-  const bibles = await getDataFromSeedPeer("bibles");
+  const bibles = await getDataFromSeedPeer("bibles", "sub1");
+
+  console.log("bibles.length", bibles?.length);
 
   if (bibles?.length > 0) {
     await Promise.all(
@@ -59,21 +335,21 @@ router.post("/books", async (req, res) => {
         const books = response?.data?.data;
 
         // Store this specific bible's books against the constructed key
-        await saveData(KEY, books);
+        await saveData(KEY, books, "sub3");
       })
     );
 
     bibles.forEach(async (bible) => {
       let KEY = `bibles/${bible.id}/books`;
 
-      const books = await getDataFromSeedPeer(KEY);
+      const books = await getDataFromSeedPeer(KEY, "sub3");
 
       await Promise.all(
         books.map(async (book) => {
           KEY = `bibles/${bible.id}/books/${book.id}`;
 
           // Store this specific book against the constructed key
-          await saveData(KEY, book);
+          await saveData(KEY, book, "sub4");
         })
       );
     });

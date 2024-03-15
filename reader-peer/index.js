@@ -2,7 +2,10 @@ const express = require("express");
 const app = express();
 
 const { initializeReaderPeer } = require("./db");
-initializeReaderPeer();
+const { initializeReaderDrive } = require("./drive");
+initializeReaderPeer().then(() => {
+  initializeReaderDrive();
+});
 
 // Middleware function to log each API request
 app.use((req, res, next) => {
@@ -14,7 +17,7 @@ app.use(express.json());
 
 app.use("/bibles", require("./routes"));
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.argv[3] || 3001;
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

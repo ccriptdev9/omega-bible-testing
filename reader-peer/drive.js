@@ -6,37 +6,39 @@ const debounce = require("debounceify");
 const b4a = require("b4a");
 const goodbye = require("graceful-goodbye");
 
-const fs = require("fs/promises");
+const fs = require("fs");
+let ddrive;
+
+const STORAGE = process.argv[4] ? `./${process.argv[4]}` : "./reader-drive";
 
 async function initializeReaderDrive() {
-  let data = await fs.readFile("../key.json", "utf-8");
+  let data = await fs.promises.readFile("../key.json", "utf-8");
   const { driveKey } = JSON.parse(data);
 
-  const store = new Chainstore("./reader-drive");
+  console.log("STORAGE", STORAGE);
+
+  const store = new Chainstore(STORAGE);
 
   const swarm = new Bitswarm();
   goodbye(() => swarm.destroy());
 
-  swarm.on("connection", (conn) => store.replicate(conn));
+  swarm.on("connection", (conn) => {
+    console.log("drives connected...");
+    store.replicate(conn);
+  });
 
-  const local = new Localddrive("./bible-audios");
-  const ddrive = new dDrive(store, b4a.from(driveKey, "hex"));
-
+  //   const local = new Localddrive("./bible-audios");
+  ddrive = new dDrive(store, b4a.from(driveKey, "hex"));
   await ddrive.ready();
 
-  const mirror = debounce(() => mirrorDrive(local, ddrive));
+  //   const mirror = debounce(() => mirrorDrive(local, ddrive));
+  //   ddrive.core.on("append", mirror);
 
-  // call the mirror function whenever content gets appended
-  // to the Hypercore instance of the hyperdrive
-  ddrive.core.on("append", mirror);
+  const discovery = swarm.join(ddrive.discoveryKey);
+  discovery.flushed().then(() => {
+    console.log("Reader drive intiailized...");
+  });
 
-  const foundPeers = store.findingPeers();
-
-  // join a topic
-  swarm.join(ddrive.discoveryKey, { client: true, server: false });
-  swarm.flush().then(() => foundPeers());
-
-  // start the mirroring process (i.e copying the contents from remote drive to local dir)
   // mirror();
 }
 
@@ -49,4 +51,12 @@ async function mirrorDrive(local, ddrive) {
   console.log("finished mirroring:", mirror.count);
 }
 
-initializeReaderDrive();
+async function getFileFromReaderDrive(path) {
+  console.log("file path - ", path);
+  const file = await ddrive.get(path);
+  console.log("file - ", file);
+
+  return file;
+}
+
+module.exports = { initializeReaderDrive, getFileFromReaderDrive };
