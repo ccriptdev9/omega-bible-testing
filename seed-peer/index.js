@@ -3,9 +3,9 @@ const app = express();
 
 const { initializeSeedPeer } = require("./db");
 const { initializeWriterDrive } = require("./drive");
-// initializeSeedPeer().then(() => {
-//   initializeWriterDrive();
-// });
+initializeSeedPeer().then(() => {
+  initializeWriterDrive();
+});
 
 // Middleware function to log each API request
 app.use((req, res, next) => {
